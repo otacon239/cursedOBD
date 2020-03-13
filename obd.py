@@ -29,8 +29,9 @@ curses.curs_set(False) # Disable cursor
 scrheight, scrwidth = stdscr.getmaxyx() # Grab screen size
 
 curses.use_default_colors() # This is required to allow inheritence of the background color for the current terminal
-curses.init_pair(1, curses.COLOR_WHITE, -1) # curses color pair 1: White on black, standard text
-curses.init_pair(2, curses.COLOR_RED, -1) # curses color pair 2: Red on black, redlines
+curses.init_pair(1, curses.COLOR_WHITE, -1) # Standard text: White on default
+curses.init_pair(2, curses.COLOR_RED, -1) # Redline: Red on default
+curses.init_pair(3, curses.COLOR_CYAN, -1) # Redline needle: Cyan on default - Only shown past redline for emphasis
 
 class ProgBar:
 	def __init__(self, title, x, y, width, height, range=0, scale=0, redline=0):
@@ -63,8 +64,8 @@ class ProgBar:
 		self.win.addstr(0, int((self.width - len(self.title) + 2)/2), " " + self.title + " ", curses.A_STANDOUT) # Draw the progrss bar label
 		if fill != 0: # Don't draw the progress bar if there are no characters
 			self.win.addstr(1, 1, "█"*(fill-1), curses.color_pair(1)) # Draw the progress bar
-			if int(self.width*self.prog) > self.redlinesize:
-				self.win.addstr(1, int(self.width*self.prog)-1, "█")
+			if int(self.width*self.prog) > self.redlinepos:
+				self.win.addstr(1, int(self.width*self.prog)-1, "█", curses.color_pair(3))
 
 	def setProg(self, prog):
 		self.prog = prog # Progress bar percentage - expects a float value from 0 to 1
