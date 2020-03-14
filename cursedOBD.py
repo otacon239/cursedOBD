@@ -32,6 +32,7 @@ curses.use_default_colors() # This is required to allow inheritence of the backg
 curses.init_pair(1, curses.COLOR_WHITE, -1) # Standard text: White on default
 curses.init_pair(2, curses.COLOR_RED, -1) # Redline: Red on default
 curses.init_pair(3, curses.COLOR_CYAN, -1) # Redline needle: Cyan on default - Only shown past redline for emphasis
+curses.init_pair(4, -1, curses.COLOR_RED) # Redline label: White on red
 
 class ProgBar:
 	def __init__(self, title, x, y, width, height, range=0, scale=0, redline=0):
@@ -54,11 +55,13 @@ class ProgBar:
 		for x in range(0, numberOfMarks):
 			self.win.addstr(self.height+1, int((self.width/numberOfMarks)*x), '%.0f' % (x*self.scale)) # Need to find a way to define precision
 
-		self.win.addstr(self.height+1, self.width-len(str(self.range))-1, str(self.range), curses.A_BOLD) # Add the max value to the end of the bar
+		self.win.addstr(self.height+1, self.width-len(str(self.range))-1, str(self.range)) # Add the max value to the end of the bar
 
 	def drawRedline(self): # Creates the "redline" showing where the max value of a guage is
 		for y in range(1, self.height+1):
 			self.win.addstr(y, self.redlinepos, "█"*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
+
+		self.win.addstr(self.height+1, self.redlinepos, str(self.redline), curses.color_pair(4))# Highlight the redline value
 
 	def drawProgBar(self):
 		fill = min(int(self.width*self.prog), self.redlinepos) # Set the width of the filled progress in characters
@@ -75,11 +78,11 @@ class ProgBar:
 		self.win = curses.newwin(self.height+2, self.width, self.y, self.x) # Create our curses window
 		self.win.border(0) # Enable the border
 
-		if self.redline!=0: # Don't draw the redline if it's not defined
-			self.drawRedline()
-
 		if self.range!=0 and self.scale!=0: # Don't draw the scale if it's not defined
 			self.drawScale()
+
+		if self.redline!=0: # Don't draw the redline if it's not defined
+			self.drawRedline()
 
 		self.drawProgBar()
 
