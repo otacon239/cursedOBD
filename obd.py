@@ -52,25 +52,27 @@ class ProgBar:
 	def drawScale(self): # Creates a series of labels along the bottom of the window for referencing the value
 		numberOfMarks = int(self.range/self.scale) # Determine number of labels for the guage
 		for x in range(0, numberOfMarks):
-			self.win.addstr(2, int((self.width/numberOfMarks)*x), '%.0f' % (x*self.scale)) # Need to find a way to define precision
+			self.win.addstr(self.height+1, int((self.width/numberOfMarks)*x), '%.0f' % (x*self.scale)) # Need to find a way to define precision
 
-		self.win.addstr(2, self.width-len(str(self.range))-1, str(self.range), curses.A_BOLD) # Add the max value to the end of the bar
+		self.win.addstr(self.height+1, self.width-len(str(self.range))-1, str(self.range), curses.A_BOLD) # Add the max value to the end of the bar
 
 	def drawRedline(self): # Creates the "redline" showing where the max value of a guage is
-		self.win.addstr(1, self.redlinepos, "█"*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
+		for y in range(1, self.height+1):
+			self.win.addstr(y, self.redlinepos, "█"*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
 
 	def drawProgBar(self):
 		fill = min(int(self.width*self.prog), self.redlinepos) # Set the width of the filled progress in characters
 		self.win.addstr(0, int((self.width - len(self.title) + 2)/2), " " + self.title + " ", curses.A_STANDOUT) # Draw the progrss bar label
 		if fill != 0: # Don't draw the progress bar if there are no characters
-			self.win.addstr(1, 1, "█"*(fill-1), curses.color_pair(1)) # Draw the progress bar
-			if int(self.width*self.prog) > self.redlinepos:
-				self.win.addstr(1, int(self.width*self.prog)-1, "█", curses.color_pair(3))
+			for y in range(1, self.height+1):
+				self.win.addstr(y, 1, "█"*(fill-1), curses.color_pair(1)) # Draw the progress bar
+				if int(self.width*self.prog) > self.redlinepos:
+					self.win.addstr(y, int(self.width*self.prog)-1, "█", curses.color_pair(3))
 
 	def setProg(self, prog):
 		self.prog = prog # Progress bar percentage - expects a float value from 0 to 1
 
-		self.win = curses.newwin(self.height, self.width, self.y, self.x) # Create our curses window
+		self.win = curses.newwin(self.height+2, self.width, self.y, self.x) # Create our curses window
 		self.win.border(0) # Enable the border
 
 		if self.redline!=0: # Don't draw the redline if it's not defined
