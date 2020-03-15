@@ -36,6 +36,7 @@ curses.init_pair(4, -1, curses.COLOR_RED) # Redline label: White on red
 
 gauge_char = "█"
 redline_char = "░"
+redline_flash_char = "█"
 needle_char = "█"
 
 def my_precision(x, n): # https://stackoverflow.com/a/30897520
@@ -88,10 +89,18 @@ class Gauge:
 		self.win.addstr(self.height+1, self.width-len(str(self.max))-1, str(self.max)) # Add the max value to the end of the gauge
 
 	def drawRedline(self): # Creates the "redline" showing where the max value of a guage is
+		global redline_char
+		if (self.value > self.redline):
+			if sin(time.time()*30) > 0:
+				local_redline = redline_flash_char
+			else:
+				local_redline = redline_char
+		else:
+				local_redline = redline_char
 		self.redlinepos = int((self.redline/self.max)*self.width) # Set the start of the redline
 		self.redlinesize = self.width - self.redlinepos # Set the width of the redline
 		for y in range(1, self.height+1):
-			self.win.addstr(y+self.y, self.redlinepos, redline_char*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
+			self.win.addstr(y, self.redlinepos, local_redline*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
 
 		self.win.addstr(self.height+1, self.redlinepos, str(self.redline), curses.color_pair(4)) # Highlight the redline value
 
@@ -143,27 +152,27 @@ class Gauge:
 
 		self.win.refresh() # Update screen
 
-rpm = Gauge("Tachometer", 0, 0, scrwidth, 3) # Tachometer
+rpm = Gauge("Tachometer", 1, 5, scrwidth-2, 3) # Tachometer
 rpm.max = 9000
 rpm.scale = 1000
 rpm.redline = 7000
 rpm.unit = "RPM"
 rpm.valuePrecision = -1
 
-thr_pos = Gauge("Throttle", 0, 6, int(scrwidth/2), 2) # Throttle Position
+thr_pos = Gauge("Throttle", 1, 11, int((scrwidth-1)/2), 2) # Throttle Position
 thr_pos.max = 1
 thr_pos.scale = .2
 thr_pos.precision = 1
 thr_pos.valuePrecision = 2
 
-voltage = Gauge("Battery Voltage", int(scrwidth/2)+1, 6, int(scrwidth/2)-1, 2)
+voltage = Gauge("Battery Voltage", int(scrwidth/2)+1, 11, int(scrwidth/2)-2, 2)
 voltage.max = 18
 voltage.scale = 3
 voltage.unit = "V"
 voltage.valuePrecision = 1
 
 while True: # Arbitrary movemnt
-	rpm.setVal(time.time()*.3%1*2500+5000)
+	rpm.setVal(time.time()*.3%1*3000+5000)
 	thr_pos.setVal(scaleValue(sin(time.time()*.3), -1, 1))
 	voltage.setVal(12)
 
