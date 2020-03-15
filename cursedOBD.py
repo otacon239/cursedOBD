@@ -22,6 +22,7 @@ X Build a basic progress bar function
 import curses
 import time
 from math import sin
+from digGauge import DigGauge
 
 stdscr = curses.initscr() # Start curses
 curses.start_color() # Enable color
@@ -42,20 +43,20 @@ needle_char = "█"
 def my_precision(x, n): # https://stackoverflow.com/a/30897520
     return '{:.{}f}'.format(x, n)
 
-def scaleValue(OldValue, OldMin, OldMax, NewMin=0, NewMax=1, clamp=True): # https://stackoverflow.com/a/929107
+def scaleValue(oldValue, oldMin, oldMax, newMin=0, newMax=1, clamp=True): # https://stackoverflow.com/a/929107
 	if clamp:
-		if OldValue < OldMin:
-			OldValue = OldMin
-		if OldValue > OldMax:
-			OldValue = OldMax
+		if oldValue < oldMin:
+			oldValue = oldMin
+		if oldValue > oldMax:
+			oldValue = oldMax
 
-	OldRange = (OldMax - OldMin)
-	if (OldRange == 0):
-		NewValue = NewMin
+	oldRange = (oldMax - oldMin)
+	if (oldRange == 0):
+		newValue = newMin
 	else:
-		NewRange = (NewMax - NewMin)
-		NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
-	return NewValue
+		newRange = (newMax - newMin)
+		newValue = (((oldValue - oldMin) * newRange) / oldRange) + newMin
+	return newValue
 
 class Gauge:
 	def __init__(self, title, x, y, width, height):
@@ -78,7 +79,7 @@ class Gauge:
 		self.redlinepos = 0 # Calculatd later
 		self.redlinesize = 0 # Calculated later
 
-		self.win = None # Creating a placeholder variable for the window to be created later
+		self.win = None # Create a placeholder variable for the window to be created later
 		# Gets buggy if I try and defin th window here and stops updating
 
 	def drawScale(self): # Creates a series of labels along the bottom of the gauge for referencing the value
@@ -139,7 +140,6 @@ class Gauge:
 		self.value = value # Gague value - expects a float value from 0 to 1
 		self.scl_value = scaleValue(self.value, self.min, self.max)
 		self.win = curses.newwin(self.height+2, self.width, self.y, self.x) # Create our curses window
-
 		self.win.border(0) # Enable the border
 
 		if not (self.max-self.min==0 or self.scale==0): # Don't draw the scale if it's not defined
@@ -152,28 +152,32 @@ class Gauge:
 
 		self.win.refresh() # Update screen
 
-rpm = Gauge("Tachometer", 1, 5, scrwidth-2, 3) # Tachometer
+rpm = Gauge("Tachometer", 1, 1, scrwidth-2, 3) # Tachometer
 rpm.max = 9000
 rpm.scale = 1000
 rpm.redline = 7000
 rpm.unit = "RPM"
 rpm.valuePrecision = -1
 
-thr_pos = Gauge("Throttle", 1, 11, int((scrwidth-1)/2), 2) # Throttle Position
+thr_pos = Gauge("Throttle", 1, 7, int((scrwidth-1)/2), 2) # Throttle Position
 thr_pos.max = 1
 thr_pos.scale = .2
 thr_pos.precision = 1
 thr_pos.valuePrecision = 2
 
-voltage = Gauge("Battery Voltage", int(scrwidth/2)+1, 11, int(scrwidth/2)-2, 2)
+voltage = Gauge("Battery Voltage", int(scrwidth/2)+1, 7, int(scrwidth/2)-2, 2)
 voltage.max = 18
 voltage.scale = 3
 voltage.unit = "V"
 voltage.valuePrecision = 1
 
+speed = DigGauge("Speed", 0, 12, 3)
+#speed.valuePrecision = 1
+
 while True: # Arbitrary movemnt
 	rpm.setVal(time.time()*.3%1*3000+5000)
 	thr_pos.setVal(scaleValue(sin(time.time()*.3), -1, 1))
 	voltage.setVal(12)
+	speed.setVal(scaleValue(sin(time.time()*.3), -1, 1, 100, 0))
 
 curses.endwin() # Need to find a way to gracefully exit
