@@ -31,8 +31,12 @@ scrheight, scrwidth = stdscr.getmaxyx() # Grab screen size
 curses.use_default_colors() # This is required to allow inheritence of the background color for the current terminal
 curses.init_pair(1, curses.COLOR_WHITE, -1) # Standard text: White on default
 curses.init_pair(2, curses.COLOR_RED, -1) # Redline: Red on default
-curses.init_pair(3, curses.COLOR_BLACK, -1) # Redline needle: Cyan on default - Only shown past redline for emphasis
+curses.init_pair(3, curses.COLOR_CYAN, -1) # Redline needle: Cyan on default - Only shown past redline for emphasis
 curses.init_pair(4, -1, curses.COLOR_RED) # Redline label: White on red
+
+gauge_char = "█"
+redline_char = "░"
+needle_char = "█"
 
 def my_precision(x, n): # https://stackoverflow.com/a/30897520
     return '{:.{}f}'.format(x, n)
@@ -65,7 +69,7 @@ class Gauge:
 		self.max = 1 # Define the label maximum
 		self.scale = 0 # Define the requency of labels
 		self.precision = 0 # Define number of decimal points for the scale
-		self.drawValue = False # Draw the value of the gauge in the title bar
+		self.drawValue = True # Draw the value of the gauge in the title bar
 		self.valuePrecision = 0 # Define number of decimal points for th printed label
 		self.unit = None # Unit of measurement
 
@@ -87,11 +91,11 @@ class Gauge:
 		self.redlinepos = int((self.redline/self.max)*self.width) # Set the start of the redline
 		self.redlinesize = self.width - self.redlinepos # Set the width of the redline
 		for y in range(1, self.height+1):
-			self.win.addstr(y+self.y, self.redlinepos, "█"*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
+			self.win.addstr(y+self.y, self.redlinepos, redline_char*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
 
 		self.win.addstr(self.height+1, self.redlinepos, str(self.redline), curses.color_pair(4)) # Highlight the redline value
 
-	def drawProgBar(self):
+	def drawGauge(self):
 		if self.redline > 0:
 			fill = min(int(self.width*self.scl_value), self.redlinepos) # Set the width of the filled progress in characters
 		else:
@@ -116,13 +120,13 @@ class Gauge:
 
 		if fill != 0: # Don't draw the guage value if there are no characters
 			for y in range(1, self.height+1):
-				self.win.addstr(y, 1, "█"*(fill-1), curses.color_pair(1)) # Draw the gauge value
+				self.win.addstr(y, 1, gauge_char*(fill-1), curses.color_pair(1)) # Draw the gauge value
 
 				if self.redline!=0: # Don't draw the redline needle if no redline is set
 					if int(self.width*self.scl_value) > self.redlinepos:
-						self.win.addstr(y, int(self.width*self.scl_value)-1, "█", curses.color_pair(3)) # Draw the redline needle
+						self.win.addstr(y, int(self.width*self.scl_value)-1, needle_char, curses.color_pair(3)) # Draw the redline needle
 
-	def setProg(self, value):
+	def setVal(self, value):
 		self.value = value # Gague value - expects a float value from 0 to 1
 		self.scl_value = scaleValue(self.value, self.min, self.max)
 		self.win = curses.newwin(self.height+2, self.width, self.y, self.x) # Create our curses window
@@ -135,7 +139,7 @@ class Gauge:
 		if self.redline!=0: # Don't draw the redline if it's not defined
 			self.drawRedline()
 
-		self.drawProgBar()
+		self.drawGauge()
 
 		self.win.refresh() # Update screen
 
@@ -143,19 +147,24 @@ rpm = Gauge("Tachometer", 0, 0, scrwidth, 3) # Tachometer
 rpm.max = 9000
 rpm.scale = 1000
 rpm.redline = 7000
-rpm.drawValue = True
 rpm.unit = "RPM"
-rpm.valuePrecision = -2
+rpm.valuePrecision = -1
 
 thr_pos = Gauge("Throttle", 0, 6, int(scrwidth/2), 2) # Throttle Position
 thr_pos.max = 1
-thr_pos.scale = .1
+thr_pos.scale = .2
 thr_pos.precision = 1
-thr_pos.drawValue = True
 thr_pos.valuePrecision = 2
 
+voltage = Gauge("Battery Voltage", int(scrwidth/2)+1, 6, int(scrwidth/2)-1, 2)
+voltage.max = 18
+voltage.scale = 3
+voltage.unit = "V"
+voltage.valuePrecision = 1
+
 while True: # Arbitrary movemnt
-	rpm.setProg(time.time()*.3%1*2500+5000)
-	thr_pos.setProg(scaleValue(sin(time.time()*.3), -1, 1))
+	rpm.setVal(time.time()*.3%1*2500+5000)
+	thr_pos.setVal(scaleValue(sin(time.time()*.3), -1, 1))
+	voltage.setVal(12)
 
 curses.endwin() # Need to find a way to gracefully exit
