@@ -60,56 +60,76 @@ class Gauge:
 		self.width = width # Full width of the gauge window
 		self.height = height # Full height of the gauge window
 
-		self.range = 0 # Define the label maximum - optional
-		self.scale = 0 # Define the requency of labels - optional
+		# Optional values
+		self.min = 0 # Define the label minimum
+		self.max = 1 # Define the label maximum
+		self.scale = 0 # Define the requency of labels
 		self.precision = 0 # Define number of decimal points for the scale
+		self.drawValue = False # Draw the value of the gauge in the title bar
+		self.valuePrecision = 0 # Define number of decimal points for th printed label
+		self.unit = None # Unit of measurement
 
 		self.redline = 0 # Defines a literal "redline" to show where the max value of a guage is - optional
 		self.redlinepos = 0 # Calculatd later
 		self.redlinesize = 0 # Calculated later
 
-		self.win = None # Creating a placeholder variable for the window to be created later; gets buggy if I try and defin th window here and stop updating
+		self.win = None # Creating a placeholder variable for the window to be created later
+		# Gets buggy if I try and defin th window here and stops updating
 
 	def drawScale(self): # Creates a series of labels along the bottom of the gauge for referencing the value
-		numberOfMarks = int(self.range/self.scale) # Determine number of labels for the gauge
+		numberOfMarks = int(self.max/self.scale) # Determine number of labels for the gauge
 		for x in range(0, numberOfMarks):
 			self.win.addstr(self.height+1, int((self.width/numberOfMarks)*x), my_precision(x*self.scale, self.precision)) # Draw the scale labels
 
-		self.win.addstr(self.height+1, self.width-len(str(self.range))-1, str(self.range)) # Add the max value to the end of the gauge
-
-	def initRedline(self, redline):
-		self.redline = redline
-		if self.redline!=0:
-			self.redlinepos = int((self.redline/self.range)*self.width) # Set the start of the redline
-			self.redlinesize = self.width - self.redlinepos # Set the width of the redline
+		self.win.addstr(self.height+1, self.width-len(str(self.max))-1, str(self.max)) # Add the max value to the end of the gauge
 
 	def drawRedline(self): # Creates the "redline" showing where the max value of a guage is
+		self.redlinepos = int((self.redline/self.max)*self.width) # Set the start of the redline
+		self.redlinesize = self.width - self.redlinepos # Set the width of the redline
 		for y in range(1, self.height+1):
 			self.win.addstr(y+self.y, self.redlinepos, "█"*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
 
-		self.win.addstr(self.height+1, self.redlinepos, str(self.redline), curses.color_pair(4))# Highlight the redline value
+		self.win.addstr(self.height+1, self.redlinepos, str(self.redline), curses.color_pair(4)) # Highlight the redline value
 
 	def drawProgBar(self):
 		if self.redline > 0:
-			fill = min(int(self.width*self.prog), self.redlinepos) # Set the width of the filled progress in characters
+			fill = min(int(self.width*self.scl_value), self.redlinepos) # Set the width of the filled progress in characters
 		else:
-			fill = int(self.width*self.prog)
+			fill = int(self.width*self.scl_value)
 
-		self.win.addstr(0, int((self.width - len(self.title) + 2)/2), " " + self.title + " ", curses.A_STANDOUT) # Draw the gauge label
+		if self.drawValue:
+			if self.valuePrecision>=0:
+				prec_str = my_precision(self.value, self.valuePrecision)
+			else:
+				prec_str = prec_str = int((self.value // 10**-self.valuePrecision) * 10**-self.valuePrecision)
+
+			if self.unit:
+				self.win.addstr(0, int((self.width - (len(self.title) + len(str(prec_str)) + len(self.unit) + 2))/2), # Calculate width of title
+					" " + self.title + " [" + str(prec_str) + " " + self.unit + "]", curses.A_STANDOUT) # Draw the gauge label + value + unit
+			else:
+				self.win.addstr(0, int((self.width - (len(self.title) + len(str(prec_str)) + 2))/2), # Calculate width of title
+					" " + self.title + " [" + str(prec_str) + "]", curses.A_STANDOUT) # Draw the gauge label + value + unit
+
+		else:
+			self.win.addstr(0, int((self.width - len(self.title) + 2)/2), # Calculate width of title
+			" " + self.title + " ", curses.A_STANDOUT) # Draw the gauge label
+
 		if fill != 0: # Don't draw the guage value if there are no characters
 			for y in range(1, self.height+1):
 				self.win.addstr(y, 1, "█"*(fill-1), curses.color_pair(1)) # Draw the gauge value
-				if self.redline!=0:
-					if int(self.width*self.prog) > self.redlinepos:
-						self.win.addstr(y, int(self.width*self.prog)-1, "█", curses.color_pair(3))
 
-	def setProg(self, prog):
-		self.prog = prog # Gague value - expects a float value from 0 to 1
+				if self.redline!=0: # Don't draw the redline needle if no redline is set
+					if int(self.width*self.scl_value) > self.redlinepos:
+						self.win.addstr(y, int(self.width*self.scl_value)-1, "█", curses.color_pair(3)) # Draw the redline needle
+
+	def setProg(self, value):
+		self.value = value # Gague value - expects a float value from 0 to 1
+		self.scl_value = scaleValue(self.value, self.min, self.max)
 		self.win = curses.newwin(self.height+2, self.width, self.y, self.x) # Create our curses window
 
 		self.win.border(0) # Enable the border
 
-		if not (self.range==0 or self.scale==0): # Don't draw the scale if it's not defined
+		if not (self.max-self.min==0 or self.scale==0): # Don't draw the scale if it's not defined
 			self.drawScale()
 
 		if self.redline!=0: # Don't draw the redline if it's not defined
@@ -119,18 +139,23 @@ class Gauge:
 
 		self.win.refresh() # Update screen
 
-rpm = Gauge("RPM", 0, 0, scrwidth, 3) # Tachometer
-rpm.range = 9000
+rpm = Gauge("Tachometer", 0, 0, scrwidth, 3) # Tachometer
+rpm.max = 9000
 rpm.scale = 1000
-rpm.initRedline(7000)
+rpm.redline = 7000
+rpm.drawValue = True
+rpm.unit = "RPM"
+rpm.valuePrecision = -2
 
 thr_pos = Gauge("Throttle", 0, 6, int(scrwidth/2), 2) # Throttle Position
-thr_pos.range = 1
+thr_pos.max = 1
 thr_pos.scale = .1
 thr_pos.precision = 1
+thr_pos.drawValue = True
+thr_pos.valuePrecision = 2
 
 while True: # Arbitrary movemnt
-	rpm.setProg(scaleValue(time.time()*.3%1*2500+5000, 0, 9000))
+	rpm.setProg(time.time()*.3%1*2500+5000)
 	thr_pos.setProg(scaleValue(sin(time.time()*.3), -1, 1))
 
 curses.endwin() # Need to find a way to gracefully exit
