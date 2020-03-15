@@ -34,51 +34,81 @@ curses.init_pair(2, curses.COLOR_RED, -1) # Redline: Red on default
 curses.init_pair(3, curses.COLOR_CYAN, -1) # Redline needle: Cyan on default - Only shown past redline for emphasis
 curses.init_pair(4, -1, curses.COLOR_RED) # Redline label: White on red
 
-class ProgBar:
-	def __init__(self, title, x, y, width, height, range=0, scale=0, redline=0):
+def my_precision(x, n): # https://stackoverflow.com/a/30897520
+    return '{:.{}f}'.format(x, n)
+
+def scaleValue(OldValue, OldMin, OldMax, NewMin=0, NewMax=1, clamp=True): # https://stackoverflow.com/a/929107
+	if clamp:
+		if OldValue < OldMin:
+			OldValue = OldMin
+		if OldValue > OldMax:
+			OldValue = OldMax
+
+	OldRange = (OldMax - OldMin)
+	if (OldRange == 0):
+		NewValue = NewMin
+	else:
+		NewRange = (NewMax - NewMin)
+		NewValue = (((OldValue - OldMin) * NewRange) / OldRange) + NewMin
+	return NewValue
+
+class Gauge:
+	def __init__(self, title, x, y, width, height):
 		self.title = title # Title
 		self.x = x # X position
 		self.y = y # Y position
-		self.width = width # Full width of the progress bar window
-		self.height = height # Full height of the progress bar window
-		self.range = range # Define the label maximum - optional
-		self.scale = scale # Define the requency of labels - optional
-		self.redline = redline # Defines a literal "redline" to show where the max value of a guage is - optional
+		self.width = width # Full width of the gauge window
+		self.height = height # Full height of the gauge window
 
-		self.redlinepos = int((self.redline/self.range)*self.width) # Set the start of the redline
-		self.redlinesize = self.width - self.redlinepos # Set the width of the redline
+		self.range = 0 # Define the label maximum - optional
+		self.scale = 0 # Define the requency of labels - optional
+		self.precision = 0 # Define number of decimal points for the scale
 
-		self.win = 0 # Creating a placeholder variable for the window to be created later
+		self.redline = 0 # Defines a literal "redline" to show where the max value of a guage is - optional
+		self.redlinepos = 0 # Calculatd later
+		self.redlinesize = 0 # Calculated later
 
-	def drawScale(self): # Creates a series of labels along the bottom of the window for referencing the value
-		numberOfMarks = int(self.range/self.scale) # Determine number of labels for the guage
+		self.win = None # Creating a placeholder variable for the window to be created later; gets buggy if I try and defin th window here and stop updating
+
+	def drawScale(self): # Creates a series of labels along the bottom of the gauge for referencing the value
+		numberOfMarks = int(self.range/self.scale) # Determine number of labels for the gauge
 		for x in range(0, numberOfMarks):
-			self.win.addstr(self.height+1, int((self.width/numberOfMarks)*x), '%.0f' % (x*self.scale)) # Need to find a way to define precision
+			self.win.addstr(self.height+1, int((self.width/numberOfMarks)*x), my_precision(x*self.scale, self.precision)) # Draw the scale labels
 
-		self.win.addstr(self.height+1, self.width-len(str(self.range))-1, str(self.range)) # Add the max value to the end of the bar
+		self.win.addstr(self.height+1, self.width-len(str(self.range))-1, str(self.range)) # Add the max value to the end of the gauge
+
+	def initRedline(self, redline):
+		self.redline = redline
+		if self.redline!=0:
+			self.redlinepos = int((self.redline/self.range)*self.width) # Set the start of the redline
+			self.redlinesize = self.width - self.redlinepos # Set the width of the redline
 
 	def drawRedline(self): # Creates the "redline" showing where the max value of a guage is
 		for y in range(1, self.height+1):
-			self.win.addstr(y, self.redlinepos, "█"*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
+			self.win.addstr(y+self.y, self.redlinepos, "█"*(self.redlinesize-1), curses.color_pair(2)) # Draw the redline
 
 		self.win.addstr(self.height+1, self.redlinepos, str(self.redline), curses.color_pair(4))# Highlight the redline value
 
 	def drawProgBar(self):
-		fill = min(int(self.width*self.prog), self.redlinepos) # Set the width of the filled progress in characters
-		self.win.addstr(0, int((self.width - len(self.title) + 2)/2), " " + self.title + " ", curses.A_STANDOUT) # Draw the progrss bar label
-		if fill != 0: # Don't draw the progress bar if there are no characters
+		if self.redline > 0:
+			fill = min(int(self.width*self.prog), self.redlinepos) # Set the width of the filled progress in characters
+		else:
+			fill = int(self.width*self.prog)
+
+		self.win.addstr(0, int((self.width - len(self.title) + 2)/2), " " + self.title + " ", curses.A_STANDOUT) # Draw the gauge label
+		if fill != 0: # Don't draw the guage value if there are no characters
 			for y in range(1, self.height+1):
-				self.win.addstr(y, 1, "█"*(fill-1), curses.color_pair(1)) # Draw the progress bar
+				self.win.addstr(y, 1, "█"*(fill-1), curses.color_pair(1)) # Draw the gauge value
 				if int(self.width*self.prog) > self.redlinepos:
 					self.win.addstr(y, int(self.width*self.prog)-1, "█", curses.color_pair(3))
 
 	def setProg(self, prog):
-		self.prog = prog # Progress bar percentage - expects a float value from 0 to 1
-
+		self.prog = prog # Gague value - expects a float value from 0 to 1
 		self.win = curses.newwin(self.height+2, self.width, self.y, self.x) # Create our curses window
+
 		self.win.border(0) # Enable the border
 
-		if self.range!=0 and self.scale!=0: # Don't draw the scale if it's not defined
+		if not (self.range==0 or self.scale==0): # Don't draw the scale if it's not defined
 			self.drawScale()
 
 		if self.redline!=0: # Don't draw the redline if it's not defined
@@ -88,9 +118,18 @@ class ProgBar:
 
 		self.win.refresh() # Update screen
 
-bar = ProgBar("RPM", 1, int(scrheight/2-1), scrwidth-1, 3, 9000, 1000, 7000) # Sample guage creation
+rpm = Gauge("RPM", 0, 0, scrwidth, 3) # Tachometer
+rpm.range = 9000
+rpm.scale = 1000
+rpm.initRedline(7000)
 
-while True:
-	bar.setProg((sin(time.time())+1)*.5) # Create constant movement
+thr_pos = Gauge("Throttle", 0, 6, int(scrwidth/2), 2) # Throttle Position
+thr_pos.range = 1
+thr_pos.scale = .1
+thr_pos.precision = 1
+
+while True: # Arbitrary movemnt
+	rpm.setProg(scaleValue(time.time()*.3%1*4000+3000, 0, 9000))
+	thr_pos.setProg(scaleValue(sin(time.time()*.3), -1, 1))
 
 curses.endwin() # Need to find a way to gracefully exit
