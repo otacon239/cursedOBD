@@ -31,7 +31,7 @@ scrheight, scrwidth = stdscr.getmaxyx() # Grab screen size
 curses.use_default_colors() # This is required to allow inheritence of the background color for the current terminal
 curses.init_pair(1, curses.COLOR_WHITE, -1) # Standard text: White on default
 curses.init_pair(2, curses.COLOR_RED, -1) # Redline: Red on default
-curses.init_pair(3, curses.COLOR_CYAN, -1) # Redline needle: Cyan on default - Only shown past redline for emphasis
+curses.init_pair(3, curses.COLOR_BLACK, -1) # Redline needle: Cyan on default - Only shown past redline for emphasis
 curses.init_pair(4, -1, curses.COLOR_RED) # Redline label: White on red
 
 def my_precision(x, n): # https://stackoverflow.com/a/30897520
@@ -99,8 +99,9 @@ class Gauge:
 		if fill != 0: # Don't draw the guage value if there are no characters
 			for y in range(1, self.height+1):
 				self.win.addstr(y, 1, "█"*(fill-1), curses.color_pair(1)) # Draw the gauge value
-				if int(self.width*self.prog) > self.redlinepos:
-					self.win.addstr(y, int(self.width*self.prog)-1, "█", curses.color_pair(3))
+				if self.redline!=0:
+					if int(self.width*self.prog) > self.redlinepos:
+						self.win.addstr(y, int(self.width*self.prog)-1, "█", curses.color_pair(3))
 
 	def setProg(self, prog):
 		self.prog = prog # Gague value - expects a float value from 0 to 1
@@ -129,7 +130,7 @@ thr_pos.scale = .1
 thr_pos.precision = 1
 
 while True: # Arbitrary movemnt
-	rpm.setProg(scaleValue(time.time()*.3%1*4000+3000, 0, 9000))
+	rpm.setProg(scaleValue(time.time()*.3%1*2500+5000, 0, 9000))
 	thr_pos.setProg(scaleValue(sin(time.time()*.3), -1, 1))
 
 curses.endwin() # Need to find a way to gracefully exit
