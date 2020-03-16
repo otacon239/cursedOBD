@@ -140,7 +140,7 @@ class Gauge:
 		self.value = value # Gague value - expects a float value from 0 to 1
 		self.scl_value = scaleValue(self.value, self.min, self.max)
 		self.win = curses.newwin(self.height+2, self.width, self.y, self.x) # Create our curses window
-		self.win.border(0) # Enable the border
+		self.win.border(0)
 
 		if not (self.max-self.min==0 or self.scale==0): # Don't draw the scale if it's not defined
 			self.drawScale()
@@ -174,10 +174,12 @@ voltage.valuePrecision = 1
 speed = DigGauge("Speed", 0, 1, 3)
 speed.x = int((scrwidth-(speed.width+2))/2)
 
-while True: # Arbitrary movemnt
-	rpm.setVal(time.time()*.3%1*3000+5000)
-	thr_pos.setVal(scaleValue(sin(time.time()*3), -1, 1))
-	voltage.setVal(12)
-	speed.setVal(scaleValue(sin(time.time()*.3), -1, 1, 100, 0))
+try:
+	while True: # Arbitrary movemnt
+		rpm.setVal(time.time()*.3%1*3000+5000)
+		thr_pos.setVal(scaleValue(sin(time.time()*3), -1, 1))
+		voltage.setVal(12)
+		speed.setVal(scaleValue(sin(time.time()*.3), -1, 1, 100, 0))
 
-curses.endwin() # Need to find a way to gracefully exit
+finally:
+	curses.endwin()
