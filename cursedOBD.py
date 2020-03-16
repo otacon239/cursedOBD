@@ -22,7 +22,7 @@ X Build a basic progress bar function
 import curses
 import time
 from math import sin
-from digGauge import DigGauge
+from digGauge import *
 
 stdscr = curses.initscr() # Start curses
 curses.start_color() # Enable color
@@ -118,11 +118,11 @@ class Gauge:
 				prec_str = prec_str = int((self.value // 10**-self.valuePrecision) * 10**-self.valuePrecision)
 
 			if self.unit:
-				self.win.addstr(0, int((self.width - (len(self.title) + len(str(prec_str)) + len(self.unit) + 2))/2), # Calculate width of title
-					" " + self.title + " [" + str(prec_str) + " " + self.unit + "]", curses.A_STANDOUT) # Draw the gauge label + value + unit
+				self.win.addstr(0, int((self.width - (len(self.title) + len(str(prec_str)) + len(self.unit) + 5))/2), # Calculate width of title
+					" " + self.title + " [" + str(prec_str) + " " + self.unit + "] ", curses.A_STANDOUT) # Draw the gauge label + value + unit
 			else:
-				self.win.addstr(0, int((self.width - (len(self.title) + len(str(prec_str)) + 2))/2), # Calculate width of title
-					" " + self.title + " [" + str(prec_str) + "]", curses.A_STANDOUT) # Draw the gauge label + value + unit
+				self.win.addstr(0, int((self.width - (len(self.title) + len(str(prec_str)) + 5))/2), # Calculate width of title
+					" " + self.title + " [" + str(prec_str) + "] ", curses.A_STANDOUT) # Draw the gauge label + value + unit
 
 		else:
 			self.win.addstr(0, int((self.width - len(self.title) + 2)/2), # Calculate width of title
@@ -152,31 +152,31 @@ class Gauge:
 
 		self.win.refresh() # Update screen
 
-rpm = Gauge("Tachometer", 1, 1, scrwidth-2, 3) # Tachometer
+rpm = Gauge("Tachometer", 1, 9, scrwidth-2, 3) # Tachometer
 rpm.max = 9000
 rpm.scale = 1000
 rpm.redline = 7000
 rpm.unit = "RPM"
-rpm.valuePrecision = -1
+rpm.valuePrecision = -2
 
-thr_pos = Gauge("Throttle", 1, 7, int((scrwidth-1)/2), 2) # Throttle Position
+thr_pos = Gauge("Throttle", 1, 15, int((scrwidth-1)/2), 2) # Throttle Position
 thr_pos.max = 1
 thr_pos.scale = .2
 thr_pos.precision = 1
 thr_pos.valuePrecision = 2
 
-voltage = Gauge("Battery Voltage", int(scrwidth/2)+1, 7, int(scrwidth/2)-2, 2)
+voltage = Gauge("Battery Voltage", int(scrwidth/2)+1, 15, int(scrwidth/2)-2, 2)
 voltage.max = 18
 voltage.scale = 3
 voltage.unit = "V"
 voltage.valuePrecision = 1
 
-speed = DigGauge("Speed", 0, 12, 3)
-#speed.valuePrecision = 1
+speed = DigGauge("Speed", 0, 1, 3)
+speed.x = int((scrwidth-(speed.width+2))/2)
 
 while True: # Arbitrary movemnt
 	rpm.setVal(time.time()*.3%1*3000+5000)
-	thr_pos.setVal(scaleValue(sin(time.time()*.3), -1, 1))
+	thr_pos.setVal(scaleValue(sin(time.time()*3), -1, 1))
 	voltage.setVal(12)
 	speed.setVal(scaleValue(sin(time.time()*.3), -1, 1, 100, 0))
 
