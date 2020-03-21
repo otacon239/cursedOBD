@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 TODO:
 X Build a basic progress bar function
