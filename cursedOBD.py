@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 TODO:
 X Build a basic progress bar function
@@ -21,10 +19,13 @@ X Build a basic progress bar function
 	- Gas mileage
 """
 
+import obd
 import curses
 import time
 from math import sin
 from digGauge import *
+
+connection = obd.OBD("/dev/ttyUSB0", 38400)
 
 stdscr = curses.initscr() # Start curses
 curses.start_color() # Enable color
@@ -37,7 +38,7 @@ curses.init_pair(2, curses.COLOR_RED, -1) # Redline: Red on default
 curses.init_pair(3, curses.COLOR_CYAN, -1) # Redline needle: Cyan on default - Only shown past redline for emphasis
 curses.init_pair(4, -1, curses.COLOR_RED) # Redline label: White on red
 
-gauge_char = "█"
+gauge_char = "▌"
 redline_char = "░"
 redline_flash_char = "█"
 needle_char = "█"
@@ -154,34 +155,42 @@ class Gauge:
 
 		self.win.refresh() # Update screen
 
-rpm = Gauge("Tachometer", 1, 9, scrwidth-2, 3) # Tachometer
-rpm.max = 9000
-rpm.scale = 1000
-rpm.redline = 7000
-rpm.unit = "RPM"
-rpm.valuePrecision = -2
+rpm = obd.commands.RPM
+rpm_gauge = Gauge("Tachometer", 1, 9, scrwidth-2, 3) # Tachometer
+rpm_gauge.max = 9000
+rpm_gauge.scale = 2000
+rpm_gauge.redline = 7000
+rpm_gauge.unit = "RPM"
+rpm_gauge.valuePrecision = -2
 
-thr_pos = Gauge("Throttle", 1, 15, int((scrwidth-1)/2), 2) # Throttle Position
-thr_pos.max = 1
-thr_pos.scale = .2
-thr_pos.precision = 1
-thr_pos.valuePrecision = 2
+thr_pos = obd.commands.THROTTLE_POS
+thr_pos_gauge = Gauge("Throttle", 1, 15, int((scrwidth-1)/2), 2) # Throttle Position
+thr_pos_gauge.max = 100
+#thr_pos_gauge.scale = 1
+#thr_pos_gauge.precision = 1
+#thr_pos_gauge.valuePrecision = 2
 
-voltage = Gauge("Battery Voltage", int(scrwidth/2)+1, 15, int(scrwidth/2)-2, 2)
-voltage.max = 18
-voltage.scale = 3
-voltage.unit = "V"
-voltage.valuePrecision = 1
+voltage = obd.commands.ELM_VOLTAGE
+voltage_gauge = Gauge("Battery Voltage", int(scrwidth/2)+1, 15, int(scrwidth/2)-2, 2)
+voltage_gauge.max = 18
+voltage_gauge.scale = 3
+voltage_gauge.unit = "V"
+voltage_gauge.valuePrecision = 1
 
-speed = DigGauge("Speed", 0, 1, 3)
-speed.x = int((scrwidth-(speed.width+2))/2)
+speed = obd.commands.SPEED
+speed_gauge = DigGauge("Speed", 0, 1, 3)
+speed_gauge.x = int((scrwidth-(speed_gauge.width+2))/2)
 
 try:
 	while True: # Arbitrary movemnt
-		rpm.setVal(time.time()*.3%1*3000+5000)
-		thr_pos.setVal(scaleValue(sin(time.time()*3), -1, 1))
-		voltage.setVal(12)
-		speed.setVal(scaleValue(sin(time.time()*.3), -1, 1, 100, 0))
+		if connection.query(rpm).value:
+			rpm_gauge.setVal(connection.query(rpm).value.magnitude)
+		if connection.query(thr_pos).value:
+			thr_pos_gauge.setVal(connection.query(thr_pos).value.magnitude)
+		if connection.query(voltage).value:
+			voltage_gauge.setVal(connection.query(voltage).value.magnitude)
+		if connection.query(speed).value:
+			speed_gauge.setVal(connection.query(speed).value.magnitude)
 
 finally:
 	curses.endwin()
